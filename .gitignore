@@ -1,0 +1,15 @@
+﻿# Donnees et fichiers volumineux
+data/
+*.csv
+*.xlsx
+*.log
+
+# Documentation de cours OC
+*.pdf
+
+# Python
+__pycache__/
+*.pyc
+
+# Temporaires Office
+~$*.pptx
