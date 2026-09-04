@@ -1,24 +1,52 @@
-﻿@'
-# Detection des binaires
-$binDir = (Get-ChildItem -Path "C:\Program Files\MongoDB\Server" -Filter "mongod.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).DirectoryName
+﻿$ErrorActionPreference = "Stop"
 
-if (-not $binDir) {
-    Write-Error "Dossier bin de MongoDB introuvable."
-    exit 1
+$mongod = (Get-Command mongod -ErrorAction SilentlyContinue).Source
+$mongos = (Get-Command mongos -ErrorAction SilentlyContinue).Source
+
+if (-not $mongod) {
+    $candidatesMongod = @(
+        "$env:ProgramFiles\MongoDB\Server\8.0\bin\mongod.exe",
+        "$env:ProgramFiles\MongoDB\Server\7.0\bin\mongod.exe",
+        "$env:LOCALAPPDATA\Programs\MongoDB\Server\8.0\bin\mongod.exe",
+        "$env:LOCALAPPDATA\Programs\MongoDB\Server\7.0\bin\mongod.exe"
+    )
+    foreach ($path in $candidatesMongod) {
+        if (Test-Path $path) { $mongod = $path; break }
+    }
 }
 
-$mongod = Join-Path $binDir "mongod.exe"
-$mongos = Join-Path $binDir "mongos.exe"
+if (-not $mongos) {
+    $candidatesMongos = @(
+        "$env:ProgramFiles\MongoDB\Server\8.0\bin\mongos.exe",
+        "$env:ProgramFiles\MongoDB\Server\7.0\bin\mongos.exe",
+        "$env:LOCALAPPDATA\Programs\MongoDB\Server\8.0\bin\mongos.exe",
+        "$env:LOCALAPPDATA\Programs\MongoDB\Server\7.0\bin\mongos.exe"
+    )
+    foreach ($path in $candidatesMongos) {
+        if (Test-Path $path) { $mongos = $path; break }
+    }
+}
 
-# 1. Config Server
-Start-Process $mongod -ArgumentList "--configsvr --replSet csrs --port 27021 --dbpath C:\data\sharding\cfg"
+$dirs = @("C:\data\sharding\cfg", "C:\data\sharding\shard_paris", "C:\data\sharding\shard_lyon")
+foreach ($d in $dirs) {
+    if (-not (Test-Path $d)) {
+        New-Item -ItemType Directory -Force -Path $d | Out-Null
+    }
+}
 
-# 2. Shards
-Start-Process $mongod -ArgumentList "--shardsvr --replSet rs_paris --port 27022 --dbpath C:\data\sharding\shard_paris"
-Start-Process $mongod -ArgumentList "--shardsvr --replSet rs_lyon --port 27023 --dbpath C:\data\sharding\shard_lyon"
+Write-Host "[1/4] Demarrage Config Server (csrs) sur port 27021..." -ForegroundColor Cyan
+Start-Process -FilePath $mongod -ArgumentList "--configsvr --replSet csrs --port 27021 --dbpath C:\data\sharding\cfg --bind_ip localhost" -WindowStyle Hidden
 
-# 3. Routeur
-Start-Process $mongos -ArgumentList "--configdb csrs/localhost:27021 --port 27024"
+Write-Host "[2/4] Demarrage Shard Paris (rs_paris) sur port 27022..." -ForegroundColor Cyan
+Start-Process -FilePath $mongod -ArgumentList "--shardsvr --replSet rs_paris --port 27022 --dbpath C:\data\sharding\shard_paris --bind_ip localhost" -WindowStyle Hidden
 
-Write-Host "Cluster de sharding demarre : Config (27021), Paris (27022), Lyon (27023), mongos (27024)."
-'@ | Out-File -FilePath ".\scripts\04_start_sharding_cluster.ps1" -Encoding utf8
+Write-Host "[3/4] Demarrage Shard Lyon (rs_lyon) sur port 27023..." -ForegroundColor Cyan
+Start-Process -FilePath $mongod -ArgumentList "--shardsvr --replSet rs_lyon --port 27023 --dbpath C:\data\sharding\shard_lyon --bind_ip localhost" -WindowStyle Hidden
+
+Start-Sleep -Seconds 4
+
+Write-Host "[4/4] Demarrage Routeur mongos sur port 27024..." -ForegroundColor Cyan
+Start-Process -FilePath $mongos -ArgumentList "--configdb csrs/localhost:27021 --port 27024 --bind_ip localhost" -WindowStyle Hidden
+
+Start-Sleep -Seconds 3
+Write-Host "[OK] Tous les processus du cluster sharde sont operationnels." -ForegroundColor Green

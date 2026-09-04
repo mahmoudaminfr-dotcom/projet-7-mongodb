@@ -1,12 +1,12 @@
-import polars as pl
+﻿import polars as pl
 from pymongo import MongoClient
 
-# 1. Connexion à la base locale MongoDB
-client = MongoClient("mongodb://localhost:27017/")
+# 1. Connexion Ã  la base locale MongoDB
+client = MongoClient("mongodb://localhost:27024/")
 db = client["noscites"]
-collection = db["paris_listings"]
+collection = db["listings"]
 
-print("Extraction des données depuis MongoDB...")
+print("Extraction des donnÃ©es depuis MongoDB...")
 
 # 2. Projection des colonnes cibles
 projection = {
@@ -22,13 +22,13 @@ projection = {
 
 data = list(collection.find({}, projection))
 
-# 3. Création du DataFrame Polars avec typage explicite
+# 3. CrÃ©ation du DataFrame Polars avec typage explicite
 df = pl.DataFrame(data).with_columns(
     [
         pl.col("number_of_reviews").cast(pl.Int64, strict=False).fill_null(0),
         pl.col("availability_30").cast(pl.Float64, strict=False),
         pl.col("reviews_per_month").cast(pl.Float64, strict=False).fill_null(0.0),
-        # Normalisation du statut Superhost (gère 't', 'true', True)
+        # Normalisation du statut Superhost (gÃ¨re 't', 'true', True)
         pl.col("host_is_superhost")
         .cast(pl.Utf8)
         .is_in(["t", "true", "True"])
@@ -36,7 +36,7 @@ df = pl.DataFrame(data).with_columns(
     ]
 )
 
-# Ajout de l'estimation du taux de réservation mensuel basé sur l'occupation à 30 jours : (30 - availability_30) / 30 * 100
+# Ajout de l'estimation du taux de rÃ©servation mensuel basÃ© sur l'occupation Ã  30 jours : (30 - availability_30) / 30 * 100
 df = df.with_columns(
     pl.when(
         pl.col("availability_30").is_not_null()
@@ -49,7 +49,7 @@ df = df.with_columns(
 )
 
 print("\n" + "=" * 60)
-print("1. TAUX DE RÉSERVATION MOYEN PAR MOIS PAR TYPE DE LOGEMENT")
+print("1. TAUX DE RÃ‰SERVATION MOYEN PAR MOIS PAR TYPE DE LOGEMENT")
 print("=" * 60)
 stats_room_type = (
     df.group_by("room_type")
@@ -71,13 +71,13 @@ stats_room_type = (
 print(stats_room_type)
 
 print("\n" + "=" * 60)
-print("2. MÉDIANE DU NOMBRE D'AVIS POUR TOUS LES LOGEMENTS")
+print("2. MÃ‰DIANE DU NOMBRE D'AVIS POUR TOUS LES LOGEMENTS")
 print("=" * 60)
 mediane_avis_globale = df["number_of_reviews"].median()
-print(f"Médiane globale du nombre d'avis : {mediane_avis_globale}")
+print(f"MÃ©diane globale du nombre d'avis : {mediane_avis_globale}")
 
 print("\n" + "=" * 60)
-print("3. MÉDIANE DU NOMBRE D'AVIS PAR CATÉGORIE D'HÔTE")
+print("3. MÃ‰DIANE DU NOMBRE D'AVIS PAR CATÃ‰GORIE D'HÃ”TE")
 print("=" * 60)
 stats_superhost = (
     df.group_by("is_superhost")
@@ -96,7 +96,7 @@ stats_superhost = (
 print(stats_superhost)
 
 print("\n" + "=" * 60)
-print("4. DENSITÉ DE LOGEMENTS PAR QUARTIER DE PARIS")
+print("4. DENSITÃ‰ DE LOGEMENTS PAR QUARTIER DE PARIS")
 print("=" * 60)
 densite_quartiers = (
     df.group_by("neighbourhood_cleansed")
@@ -111,7 +111,7 @@ densite_quartiers = (
 print(densite_quartiers)
 
 print("\n" + "=" * 60)
-print("5. TOP QUARTIERS AVEC LE PLUS FORT TAUX DE RÉSERVATION PAR MOIS")
+print("5. TOP QUARTIERS AVEC LE PLUS FORT TAUX DE RÃ‰SERVATION PAR MOIS")
 print("=" * 60)
 top_quartiers_resa = (
     df.group_by("neighbourhood_cleansed")
@@ -128,7 +128,7 @@ top_quartiers_resa = (
             .alias("avis_mensuels_moyen"),
         ]
     )
-    .filter(pl.col("nb_logements") >= 100)  # Filtre pour éviter les biais sur volumes anecdotiques
+    .filter(pl.col("nb_logements") >= 100)  # Filtre pour Ã©viter les biais sur volumes anecdotiques
     .sort("taux_reservation_moyen_%", descending=True)
 )
 print(top_quartiers_resa)
