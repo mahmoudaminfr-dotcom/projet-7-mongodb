@@ -164,7 +164,7 @@ $addParis = mongosh --port 27024 --eval "try { sh.addShard('rs_paris/localhost:2
 if ($LASTEXITCODE -ne 0 -and $addParis -notmatch "already exists" -or $addParis -match "error") {
     # On valide si le shard est déjà ajouté ou s'il y a une vraie erreur
     $checkShard = mongosh --port 27024 --eval "printjson(db.getSiblingDB('config').shards.findOne({_id: 'rs_paris'}))" --quiet
-    if (-not $checkShard -match "rs_paris") {
+    if ($checkShard -notmatch "rs_paris") {
         Write-Error "[ECHEC CRITIQUE] Impossible d'ajouter le shard rs_paris : $addParis"
         exit 1
     }
@@ -173,7 +173,7 @@ if ($LASTEXITCODE -ne 0 -and $addParis -notmatch "already exists" -or $addParis 
 $addLyon = mongosh --port 27024 --eval "try { sh.addShard('rs_lyon/localhost:27023'); } catch(e) { print(e.message); quit(1); }" --quiet
 if ($LASTEXITCODE -ne 0 -and $addLyon -notmatch "already exists") {
     $checkShardLyon = mongosh --port 27024 --eval "printjson(db.getSiblingDB('config').shards.findOne({_id: 'rs_lyon'}))" --quiet
-    if (-not $checkShardLyon -match "rs_lyon") {
+    if ($checkShardLyon -notmatch "rs_lyon") {
         Write-Error "[ECHEC CRITIQUE] Impossible d'ajouter le shard rs_lyon : $addLyon"
         exit 1
     }
