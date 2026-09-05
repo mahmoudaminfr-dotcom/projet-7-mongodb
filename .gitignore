@@ -8,10 +8,15 @@ data/
 *.pdf
 *.png
 projet_complet_audit.txt
+projet_complet_audit_v2.txt
+projet_complet_audit_V3.txt
+
+# Scripts utilitaires locaux
+generer_audit.ps1
 
 # Python
 __pycache__/
 *.pyc
 
 # Temporaires Office
-~$*.pptxprojet_complet_audit_v2.txt
+~$*.pptx
