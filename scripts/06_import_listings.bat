@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 setlocal enabledelayedexpansion
 
 set DATA_FILE=data\listings_all.csv

@@ -98,7 +98,7 @@ mongosh "mongodb://localhost:27018" --eval "rs.status().members.map(m => ({ host
 
 #### 5. Arrêter les processus rs0
 ```PowerShell
-Get-Process mongod -ErrorAction SilentlyContinue | Where-Object { $_.Path -notlike "*Service*" } | Stop-Process -Force
+Get-CimInstance Win32_Process -Filter "Name = 'mongod.exe' OR Name = 'mongos.exe'" | Where-Object { $_.CommandLine -like "*C:\data\*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 ```
 
 ---
@@ -141,25 +141,35 @@ Sortie officielle de l'audit strict `07_verify_distribution.js` sur `mongos:2702
 =======================================================
           AUDIT DE DISTRIBUTION DES SHARDS             
 =======================================================
-[OK] Collection shardee detectee : cle = {"city":1,"_id":1}
+[OK] Collection shardée détectée : clé = {"city":1,"_id":1}
 
 --- SHARD : rs_paris ---
   Documents : 95 885
-  Taille    : 328.49 Mo
+  Taille    : 327.44 Mo
 
 --- SHARD : rs_lyon ---
   Documents : 9 973
-  Taille    : 33.33 Mo
+  Taille    : 33.24 Mo
 
 =======================================================
-          REPARTITION METIER PAR VILLE                 
+          RÉPARTITION MÉTIER GLOBALE PAR VILLE         
 =======================================================
 [
-  { _id: 'Paris', total: 95885 },
-  { _id: 'Lyon', total: 9973 }
+  {
+    _id: 'Paris',
+    total: 95885
+  },
+  {
+    _id: 'Lyon',
+    total: 9973
+  }
 ]
 
-[OK] Validation de l'isolation geographique et de l'integrite volumetrique terminee avec succes.
+=======================================================
+       VÉRIFICATION PHYSIQUE DE L'ISOLATION PAR SHARD  
+=======================================================
+[OK] Étanchéité physique validée : rs_paris (95885 documents Paris) | rs_lyon (9973 documents Lyon).
+[OK] Validation de l'isolation géographique et de l'intégrité volumétrique terminée avec succès.
 ```
 
 ---
@@ -167,5 +177,5 @@ Sortie officielle de l'audit strict `07_verify_distribution.js` sur `mongos:2702
 ## 6. Arrêt et Nettoyage des Processus Locaux
 
 ```PowerShell
-Get-Process mongod, mongos -ErrorAction SilentlyContinue | Where-Object { $_.Path -notlike "*Service*" } | Stop-Process -Force
+Get-CimInstance Win32_Process -Filter "Name = 'mongod.exe' OR Name = 'mongos.exe'" | Where-Object { $_.CommandLine -like "*C:\data\sharding*" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 ```
