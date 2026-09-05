@@ -1,29 +1,31 @@
-﻿# scripts/01_start_rs0.ps1 - Demarrage de rs0 avec readiness polling actif
+﻿# scripts/01_start_rs0.ps1 - Demarrage de rs0 avec readiness polling actif et detection universelle
 
 $ErrorActionPreference = "Stop"
 
-# 1. Detection automatique du binaire mongod
+# Detection universelle et dynamique du binaire mongod
 $mongod = (Get-Command mongod -ErrorAction SilentlyContinue).Source
 if (-not $mongod) {
     $candidates = @(
-        "$env:ProgramFiles\MongoDB\Server\8.0\bin\mongod.exe",
-        "$env:ProgramFiles\MongoDB\Server\7.0\bin\mongod.exe",
-        "$env:LOCALAPPDATA\Programs\MongoDB\Server\8.0\bin\mongod.exe",
-        "$env:LOCALAPPDATA\Programs\MongoDB\Server\7.0\bin\mongod.exe"
+        "$env:ProgramFiles\MongoDB\Server\*\bin\mongod.exe",
+        "$env:LOCALAPPDATA\Programs\MongoDB\Server\*\bin\mongod.exe"
     )
-    foreach ($path in $candidates) {
-        if (Test-Path $path) { $mongod = $path; break }
+    foreach ($pattern in $candidates) {
+        $found = Get-ChildItem -Path $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) {
+            $mongod = $found.FullName
+            break
+        }
     }
 }
 
 if (-not $mongod) {
-    Write-Error "Binaire mongod.exe introuvable. Verifiez l'installation de MongoDB."
+    Write-Error "Binaire mongod.exe introuvable. Veuillez verifier l'installation de MongoDB."
     exit 1
 }
 
 Write-Host "[INFO] Binaire mongod detecte : $mongod" -ForegroundColor Cyan
 
-# 2. Fonction de verification active de disponibilite
+# Fonction de verification active de disponibilite
 function Wait-MongoPort {
     param([int]$Port, [int]$TimeoutSec = 30)
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
@@ -37,7 +39,7 @@ function Wait-MongoPort {
     return $false
 }
 
-# 3. Creation des dossiers de donnees
+# Creation des dossiers de donnees
 $paths = @("C:\data\rs0_1", "C:\data\rs0_2", "C:\data\rs0_3")
 foreach ($p in $paths) {
     if (-not (Test-Path $p)) {
@@ -45,7 +47,7 @@ foreach ($p in $paths) {
     }
 }
 
-# 4. Demarrage des 3 instances
+# Demarrage des 3 instances
 Write-Host "[1/3] Lancement mongod Node 1 (Data) sur port 27018..." -ForegroundColor Green
 Start-Process -FilePath $mongod -ArgumentList "--replSet rs0 --port 27018 --dbpath C:\data\rs0_1 --bind_ip localhost" -WindowStyle Hidden
 
@@ -55,7 +57,7 @@ Start-Process -FilePath $mongod -ArgumentList "--replSet rs0 --port 27019 --dbpa
 Write-Host "[3/3] Lancement mongod Node 3 (Arbiter) sur port 27020..." -ForegroundColor Green
 Start-Process -FilePath $mongod -ArgumentList "--replSet rs0 --port 27020 --dbpath C:\data\rs0_3 --bind_ip localhost" -WindowStyle Hidden
 
-# 5. Attente active de disponibilite sur les 3 ports
+# Attente active de disponibilite sur les 3 ports
 if (-not (Wait-MongoPort -Port 27018) -or -not (Wait-MongoPort -Port 27019) -or -not (Wait-MongoPort -Port 27020)) {
     Write-Error "[ECHEC] L'une des instances mongod de rs0 n'a pas demarre a temps."
     exit 1

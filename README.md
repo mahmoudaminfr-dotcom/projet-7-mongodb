@@ -34,7 +34,7 @@ projet-7-mongodb/
 │   ├── 03_test_failover.ps1             # Simulation automatisée et defensive du failover
 │   ├── 04_start_sharding_cluster.ps1    # Orchestration avec readiness polling (csrs -> shards -> mongos)
 │   ├── 05_setup_zones.js                # Configuration du sharding et des tags de zone
-│   ├── 06_import_listings.bat           # Ingestion batch unifiee avec --drop et gestion d'erreurs
+│   ├── 06_import_listings.bat           # Ingestion batch unifiee avec vidage cible (sans destruction des zones)
 │   └── 07_verify_distribution.js        # Audit strict d'etancheite physique et volumetrique
 ├── data/
 │   └── listings_all.csv                 # Dataset unifie (105 858 lignes, ignore par Git)
