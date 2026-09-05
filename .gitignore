@@ -4,8 +4,10 @@ data/
 *.xlsx
 *.log
 
-# Documentation de cours OC
+# Documentation de cours et audits
 *.pdf
+*.png
+projet_complet_audit.txt
 
 # Python
 __pycache__/
