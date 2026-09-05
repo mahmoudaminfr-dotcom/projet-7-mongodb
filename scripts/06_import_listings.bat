@@ -9,8 +9,15 @@ if not exist "%DATA_FILE%" (
     exit /b 1
 )
 
-echo Ingestion des donnees dans MongoDB (port 27024)...
-mongoimport --port 27024 --db noscites --collection listings --type csv --headerline --drop --file "%DATA_FILE%"
+echo Nettoyage des donnees existantes (vidage sans destruction du sharding ni des zones)...
+mongosh "mongodb://localhost:27024/noscites" --eval "db.listings.deleteMany({})" --quiet
+if errorlevel 1 (
+    echo [ERREUR] Impossible de vider la collection sur le port 27024.
+    exit /b 1
+)
+
+echo Ingestion batch dans MongoDB (port 27024)...
+mongoimport --port 27024 --db noscites --collection listings --type csv --headerline --file "%DATA_FILE%"
 
 if errorlevel 1 (
     echo [ERREUR] L'importation des donnees a echoue.
